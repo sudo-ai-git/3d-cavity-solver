@@ -89,6 +89,15 @@ recovers (and this design exceeds) the naive N× target by compensating the coup
 droop — exactly how real coupled-cell linacs are tuned.
 
 ---
+## 5. Small linac design
+
+`LINAC_DESIGN.md` + `linac_design.py`: a self-consistent **6 MeV / 200 µA / 2.998 GHz
+S-band standing-wave π-mode electron linac** design built directly on the validated
+results above — 5 β-tapered cells (23.2 cm structure, end cells flattened), 40 MV/m,
+~2.2 MW pulsed magnetron. Grounded in the validated TM₀₁₀ / beam / flattening physics;
+real R_sh/Q and ASTRA tracking are documented as honest next steps.
+
+---
 
 ## Validation chain (the gate discipline that kept every number honest)
 
