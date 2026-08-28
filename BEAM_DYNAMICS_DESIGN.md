@@ -82,30 +82,89 @@ F[1,Ny,Nz] ... F[Nx,Ny,Nz]
 
 ### 3.3 Phase / auto-phasing (critical, from manual §"Cavity fields")
 
-- `Nue`=frequency, `MaxE`=amplitude, `Phi`=phase.
+- `Nue`=frequency, `MaxE`=amplitude, `Phi`=phase. **`Nue` is in GHz**; `MaxE` in **MV/m**.
+- With `C_noscale( )=True`, the file values are taken **literally** as MV/m (TM) or T (TE)
+  instead of being scaled to MaxE.
 - **Auto-phasing is ON by default**: ASTRA scans the reference particle's gain and sets the
   working phase to *max-gain*; user `Phi` is then *relative*. Set `Auto_Phase=False` to
   take control.
 - Phase `ω·t+φ` **increases with time**, so the bunch **tail sees a higher phase than the
   head**; give the tail more energy via **negative `Phi`**.
+- **E–B phase (Appendix I, verified):** `Ez(r) = [Ez0 − (r²/4)(Ez''+ω²Ez0/c²)]·sin(ωt)` and
+  `Bφ(r) = [(r/2)Ez0' − (r³/16)(Ez'''+ω²Ez0'/c²)]·(ω/c²)·cos(ωt)` — **E ∝ sin(ωt), Bφ ∝ cos(ωt)**.
+  A single FEM eigenmode gives this 90°-spaced complex field; export accordingly.
 - **Link to our figures of merit:** `V_acc`/T we computed are the *ideal-phase* field
-  integral; ASTRA's auto-phasing finds the true working phase for a real bunch —
-
+  integral; ASTRA's auto-phasing finds the true working phase for a real bunch. Pick `MaxE`
+  from the physical peak E, and check ASTRA's peak gain ≈ `V_acc × q` at crest.
 ---
 
-## 4. GPT — confirmed facts and honest gaps
+## 4. GPT import — VERIFIED from Pulsar's official documentation & source
 
-**Honesty note:** the GPT manual (containing GPT's exact field-file ASCII layout) is
-**licensed, not public**. pulsar.nl documents that GPT imports fields from **Superfish**,
-**TOSCA/OPERA**, and a **generic/GDF ASCII** format via field-map elements, with the cavity
-element taking frequency + normalization + phase — but the exact native layout requires
-the licensed manual. We will not fabricate it.
+**Honesty note:** the full GPT user manual is licensed (not public), but Pulsar's own
+**official open-source field-map documentation and writers** are downloadable from the
+GPT community page, and we verified the format directly from those. Sources fetched
+2026-08-28: `map3D_EB.pdf` + `map3D_EB.c` ("3D field-maps for oscillating fields"),
+`TM110cylcavity.pdf`, and the GDF readers (`gdfreadhead.m`, `load_gdf.m`).
 
-**Best open reference:** Cornell's **Bmad** tracking code reads GPT-style field maps and is
-public — the closest authoritative open specification. *(Being confirmed by parallel
-research at time of writing.)* The **workflow is identical to ASTRA up to the file writer**,
-so the hard-won asset (validated E/B arrays + correct B extraction) is code-independent;
-only the thin serialization differs.
+### 4.1 GPT reads a GDF file, not raw ASCII
+
+GPT's oscillating-field maps (`map3D_EB`, `map3D_Ecomplex`, `map3D_Hcomplex`) read a
+**GDF (General Data Format) file** — a binary format with a directory structure. An
+ASCII tabular field is first converted to GDF with Pulsar's `asci2gdf` tool, which also
+applies unit conversion to the **MKS/SI system GPT uses internally**:
+
+```bash
+asci2gdf -o mapE.gdf mapE.txt x 1e-3 y 1e-3 z 1e-3 \
+         Ex 1 Ey 1 Ez 1 Bx 1e-4 By 1e-4 Bz 1e-4
+#                 ^ mm->m                       ^ Gauss->T (B here in Gauss)
+```
+
+The GDF binary block header is: `U8 name[16]; U32 type; U32 size;` with data types
+`t_ascii=0x1, t_s32=0x2, t_dbl=0x3`, then arrays of doubles.
+
+### 4.2 The `map3D_EB` element (standing-wave, E and B together)
+
+```
+map3D_EB(ECS, "mapEB.gdf", "x","y","z", "Ex","Ey","Ez","Bx","By","Bz", ffac, phi, w);
+```
+
+Fields it represents:
+```
+E =  cos( w·t + φ ) · E_int(x,y,z)
+B = −sin( w·t + φ ) · B_int(x,y,z)
+```
+- `E_int`, `B_int` from **trilinear interpolation** of the GDF arrays.
+- **`w` = angular frequency (rad/s)**, `phi` = phase offset, `ffac` = global amplitude.
+- Grid datapoints may be unordered (GPT sorts them); grid inferred from min/max/spacing.
+- Requires E and B to be **90° out of phase with position-independent φ**.
+
+### 4.3 `map3D_Ecomplex` / `map3D_Hcomplex` (general complex fields)
+
+For fields not satisfying the 90°/uniform-phase assumption, export the **real and
+imaginary parts** separately (this is what the CST MW-Studio interface produces, and is
+exactly what an FEM **eigenmode** solver naturally gives):
+
+```
+E = cos(w·t+φ)·E_real − sin(w·t+φ)·E_imag
+B = μ0[ cos(w·t+φ)·H_real − sin(w·t+φ)·H_imag ]   (H-complex)
+map3D_Ecomplex(ECS, "mapE.gdf", "x","y","z",
+               "Exre","Eyre","Ezre","Exim","Eyim","Ezim", ffac, phi, w);
+```
+- Import the E-map and H-map as **two elements layered on top of each other**; GPT adds
+  their fields (Pulsar's documented CST procedure).
+- Expected ASCII layout (from the CST→GPT procedure, directly transferable to FEM):
+  ```
+  x y z ExRe EyRe EzRe ExIm EyIm EzIm       <-- one header line, space-separated
+  ...rows of data (mm, V/m)...
+  ```
+
+### 4.4 RF phase convention (verified, Pulsar)
+
+The standing-wave eigenmode of a cavity has E and B **90° out of phase in time**
+(`E ∝ cos(ωt)`, `B ∝ −sin(ωt)` for `map3D_EB`; equivalently `Ez ∝ sin(ωt)`, `Bφ ∝ cos(ωt)`
+in ASTRA's Appendix I). This is the crucial link to our FEM solver: a single eigenmode
+gives the **complex spatial field** (real+imaginary amplitude), and the tracker's `w`, `φ`
+reconstruct the time dependence. Do NOT export E and B as two uncorrelated real snapshots.
 
 ---
 
@@ -159,6 +218,6 @@ only the thin serialization differs.
 | E field extraction | ✅ validated |
 | **B field extraction (gate: B/(E/c)≈1–2)** | ⚠️ **failed at 7.8× — must redo on finer grid** |
 | Beam tracker (in-repo) | ❌ abandoned — would have been wrong |
-| ASTRA field export | ✅ spec verified from manual |
-| GPT field export | ⚠️ exact layout licensed; Bmad as open reference |
+| ASTRA field export | ✅ spec verified from manual v3.2 |
+| GPT field export | ✅ verified from Pulsar official map3D_EB + GDF sources |
 | Real ASTRA/GPT particle run | ⛔ **future work** — requires installing ASTRA/GPT |
