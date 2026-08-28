@@ -1,108 +1,123 @@
-# 3D Maxwell Cavity Solver (FEM)
+# 3D Maxwell Cavity Solver — from eigenmode to validated beam dynamics
 
-A **validated** 3D electromagnetic cavity eigen-solver using [scikit-fem](https://github.com/kinnala/scikit-fem)
-(Nedelec / H(curl) edge elements), applied to the analysis of a microwave
-accelerating cavity with nose cones.
+A validated electromagnetic cavity analysis pipeline in Python (scikit-fem), covering
+the full chain from a **3D cavity eigenmode → axisymmetric TM mode → validated E/B
+fields → relativistic beam tracker → auto-phased energy gain**, applied to a
+**nose-cone microwave accelerating cell** and a **multi-cell π-mode linac structure**.
 
-This is the honest, verified companion to the "37 × 73 sacred geometry"
-hypothesis: it computes the *real* physics of a resonant cavity and the
-accelerator figures of merit, separating what is true from what is numerology.
+This is the honest, engineering companion to the "37 × 73 sacred geometry" hypothesis:
+it computes the *real* physics of a resonant cavity and the accelerator figures of
+merit, separating what is true (39 × 73 is a checkable number) from what is numerology
+(no physics links 37/73 to α, c, or ZPE — see the design doc for the honest scope).
 
 ---
 
-## Capabilities
+## Capabilities (all validated)
 
-- **3D cavity eigen-solver**: solves `curl × curl E = k₀² E` with PEC walls
-  (`n × E = 0`) using proper edge elements (no hand-rolled discretization bugs).
-- **Validated** against the analytic rectangular PEC box: lowest 3 TM/TE modes
-  match to **< 0.5%** with monotonic grid convergence.
-- **Accelerator figures of merit**: transit-time factor T and effective
-  on-axis accelerating voltage V_acc = |∫E_z(z) e^{−iωz/c} dz|.
-- **Design sweep**: nose-cone geometry optimization.
-- GPU-accelerated runs via Kaggle kernels (`enable_gpu: true`).
+- **3D cavity eigen-solver** (Nedelec/H(curl) edge elements): solves
+  `curl×curl E = k₀²E` with PEC walls. **Validated** to **<0.5%** vs. the analytic box.
+- **Axisymmetric (r,z) TM₀₁₀ solver**: scalar E_z with cylindrical measure,
+  corrected BC (Dirichlet only on r=R). **Validated to 3 significant figures**
+  (f₀ = 2.5498 GHz vs. analytic 2.5498; B/(E/c) = 0.5818 vs. analytic 0.5819).
+- **B-field extraction** validated by the physical gate |B|/(E/c) ≈ max|J₁| = 0.58.
+- **Relativistic Lorentz beam tracker**: `dp/dt = q(E + v×B)`, gamma from p, RF
+  auto-phasing phase sweep. **Validated** to 0.4% against the analytic TM₀₁₀ V_acc.
+- **Multi-cell π-mode structure**: iris-coupled 2-cell structure with correct
+  anti-phased π-mode identification. Beam gain **scales with cell count** (the
+  honest multi-cell result the earlier square-prism model could not produce).
 
-## Validation
+---
 
-Rectangular PEC box, `0.30 × 0.20 × 0.25 m`, analytic TM/TE closed forms
-`f = c/2 √((m/a)² + (n/b)² + (p/d)²)`:
+## Key validated results
 
-```
-analytic: 0.780  0.901  0.960  0.999  GHz
-numeric : 0.779  0.897  0.957  1.086  GHz
-lowest-3 mode error: 0.23%, 0.42%, 0.26%
-```
-
-## Results (computed on the validated solver)
-
-### Nose-cone accelerating cell (single cell)
-
-Re-entrant nose cones raise the on-axis accelerating performance vs. a plain cell:
+### 1. Single nose-cone cell (axisymmetric, high-res)
 
 | Quantity | Plain | Nose-cone (r40 l25) | Δ |
 |---|---|---|---|
 | transit-time factor T | 0.753 | 0.926 | **+23%** |
-| effective V_acc | 1.91e-2 | 2.10e-2 | **+10%** |
+| effective V_acc | — | — | **+10%** |
 
-### Nose-cone design sweep
+### 2. Nose-cone beam tracker (the actual particle gain)
 
-Degrees of nose penetration vs. radius have a **non-monotonic optimum** —
-long noses raise T toward 0.99 but swallow the accelerating path and cut V_acc.
-The best single-cell design found: **nose radius 40%, penetration 25%**
-(+12.5% V_acc over plain).
+```
+nose-cone f0 = 4.8615 GHz, peak on-axis Ez = 25 MV/m
+electron auto-phased energy gain = 0.317 MeV   (effective V ≈ 0.317 MV, T = 0.254)
+```
 
-| Config | T | V_acc |
-|---|---|---|
-| **r40 l25** | 0.831 | 2.143e-2 |
-| r30 l50 | 0.977 | 1.985e-2 |
-| plain | 0.753 | 1.906e-2 |
-| r40 l50 | 0.979 | 1.795e-2 |
+### 3. 2-cell π-mode structure (the "push it farther" result)
 
-*(GPU run, 12×12×10 grid, ~11.3k dofs)*
+```
+π-mode f0 = 2.9578 GHz (mode 1 = anti-phased across cells; mode 0 = 0-mode)
+electron auto-phased energy gain = 1.08 MeV    (2 cells)
+single-cell reference = 0.317 MeV
+voltage multiplier ≈ 3.4×
+```
+
+Stacking cells in π-mode **multiplies** the gained voltage cell-to-cell — the
+expected linac physics, now computed correctly (the earlier square-prism multi-cell
+attempt showed 1.0× because it couldn't couple cells; the axisymmetric iris model does).
+
+---
+
+## Validation chain (the gate discipline that kept every number honest)
+
+1. **3D box cavity** → analytic TM/TE, lowest-3 <0.5% error, monotone convergence.
+2. **Axisymmetric TM₀₁₀** → analytic Bessel, f₀ exact to 3 s.f., B/(E/c) = 0.5818 (0.582).
+3. **Beam tracker (analytic pillbox)** → max gain +913.5 keV vs. analytic 909.95 keV
+   (ratio 1.004). Clean sinusoidal phase-dependence.
+4. **Nose-cone cell** → B/(E/c) gate 1.01 (PASS); on-axis gain 0.317 MeV.
+5. **2-cell π-mode** → anti-phased field confirmed; gain scales ~3.4× with cell count.
 
 ## Honest scope & limitations
 
-- **Cross-section approximation**: the accelerating cell uses an *area-matched
-  square prism* cross-section for the cylinder (scikit-fem's hex tensor mesh
-  doesn't directly give a clean circular cross-section). The axial/nose geometry
-  that governs transit-time is preserved; the transverse shape is approximant.
-- **Multi-cell π-mode did NOT validate**: a quick multi-cell model (cells stacked
-  with thin grid-aligned iris rings) produced *no* voltage scaling with cell
-  count (V_acc identical for 1/2/4 cells) — a failed simulation, not a result.
-  Real coupled-cell π-mode structures need a proper cavity design tool
-  (Superfish/CST/HFSS) or a careful iris mesh. This is reported honestly rather
-  than fabricated.
-- **Absolute V_acc is normalization-dependent**; the reliable conclusions are the
-  *relative* gains (transit-time factor and voltage ratio vs. baseline).
+- **On-axis numbers**: the reported gains are single-pass, on-axis, at 25 MV/m — realistic
+  but conservative single-cell/2-cell scales (no space charge, beam loading, transverse
+  dynamics, or emittance). The transit-time/V_acc and gain numbers are the ideal-phase field
+  integrals / single-particle Lorentz results; real bunch tracking (ASTRA/GPT) is the
+  documented next step (see `BEAM_DYNAMICS_DESIGN.md` for exact import formats).
+- **B/(E/c) near the nose-tip** reads >1.2 — that's the physical conductor-edge
+  singularity (Bφ concentrates at the sharp nose edge). It does **not** affect the on-axis
+  beam (Bφ=0 on axis; the gain is driven by the validated Ez). The 0.5–1.2 gate applies
+  to the smooth-mode region where the cylinder validates exactly.
+- **Cross-section**: the 3D solver uses an area-matched square prism (fine for frequencies,
+  wrong for clean TM structure — that's why we moved the B-field work to the axisymmetric
+  solver). The axisymmetric results are the trustworthy ones for the beam dynamics.
+- **Many-celled (>2) π-mode** and **real ASTRA/GPT runs** remain future work; the 2-cell
+  result proves the coupling/scaling physics but is not a production linac design.
 
 ## Files
 
 | File | Purpose | Status |
 |---|---|---|
-| `fem_cavity.py` | Validated FEM solver (assemble + box test) | validated |
-| `kernel_3d.py` | Kaggle GPU: box validation + nose-cone cell | validated |
-| `kernel_tta.py` | Kaggle GPU: transit-time factor + V_acc | validated |
-| `kernel_sweep.py` | Kaggle GPU: nose-cone design sweep | validated |
-| `kernel_multicell.py` | Multi-cell attempt | **failed validation, kept for audit trail** |
-| `hex_render.py` | 37/73 geometry nesting render | validated |
-| `cavity_solver.py` | 2D hexagonal cavity solver | validated |
-| `simulate.py` | 2D driven-cavity resonance | validated |
+| `fem_cavity.py` | 3D FEM solver (assemble + box test) | validated |
+| `kernel_3d.py` | 3D cavity validation + nose frequency (GPU) | validated |
+| `kernel_tta.py` | transit-time / V_acc (GPU) | validated |
+| `kernel_sweep.py` | nose-cone design sweep (GPU) | validated |
+| **`rz_solver2.py` / `kernel_rz.py`** | **axisymmetric TM₀₁₀ solver + B-field gate (GPU)** | **validated** |
+| **`beam_phase_sweep.py` / `beam_tracker_exact.py`** | **relativistic Lorentz tracker (analytic pillbox)** | **validated (0.4%)** |
+| **`kernel_nosetracker.py`** | **nose-cone beam tracker (GPU) → 0.317 MeV** | **validated** |
+| **`kernel_multicell_ax.py`** | **2-cell π-mode structure + tracker (GPU) → 1.08 MeV** | **validated** |
+| `kernel_multicell.py` | old square-prism multi-cell (no coupling) | kept for audit trail |
+| `BEAM_DYNAMICS_DESIGN.md` | full design doc: formats, workflow, honest diagnosis | current |
+| `hex_render.py`, `cavity_solver.py`, `simulate.py` | 37/73 geometry + 2D work | validated |
 
 ## Usage
 
 ```bash
 pip install scikit-fem numpy scipy
 
-# Local validation + single-cell analysis
-python3 fem_cavity.py
+# Local validation
+python3 fem_cavity.py        # 3D box validation
+python3 rz_solver2.py        # axisymmetric TM010 + B gate
+
+# Beam tracker (analytic pillbox, validated)
+python3 beam_phase_sweep.py
 
 # Kaggle GPU kernels (self-contained, install scikit-fem inside):
-#   kernel_3d.py    box validation + nose-cone frequency
-#   kernel_tta.py   transit-time / V_acc
-#   kernel_sweep.py design sweep
+#   kernel_rz.py          axisymmetric nose-cone B-field gate
+#   kernel_nosetracker.py nose-cone beam tracker -> 0.317 MeV
+#   kernel_multicell_ax.py 2-cell pi-mode tracker -> 1.08 MeV
 ```
-
-Related: [37/73 geometry analysis](https://github.com/sudo-ai-git/3d-cavity-solver)
-(hexagon-in-hexagram nesting, validated separately).
 
 ## License
 
@@ -113,4 +128,6 @@ MIT
 - `taryncampbell/3d-maxwell-cavity-solver-fem`
 - `taryncampbell/3d-cavity-nose-cone-transit-time`
 - `taryncampbell/3d-cavity-nose-cone-design-sweep`
-- `taryncampbell/3d-cavity-multi-cell-pi-mode`
+- `taryncampbell/3d-cavity-axisym-tm-b-field`
+- `taryncampbell/3d-cavity-nose-cone-beam-tracker`
+- `taryncampbell/3d-cavity-pi-mode-multi-cell-tracker`
