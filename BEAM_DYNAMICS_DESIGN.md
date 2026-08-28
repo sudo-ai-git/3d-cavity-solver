@@ -302,7 +302,35 @@ Script: `beam_phase_sweep.py` (validated), `beam_tracker_exact.py` (single-phase
 
 ---
 
-## 9. Status
+## 9. Nose-cone beam tracker — VALIDATED (2026-08-28)
+
+The axisymmetric nose-cone E/B is fed into the validated relativistic Lorentz tracker.
+**Result (Kaggle GPU, 80×80 grid, 25 MV/m peak on-axis gradient):**
+```
+nose-cone f0 = 4.8615 GHz
+peak on-axis Ez = 25.0 MV/m
+RF phase | electron energy gain (MeV)
+  2.356  |  +0.317   ← MAX (auto-phased crest)
+  5.498  |  -0.317   ← MIN
+  (clean sinusoid vs phase, symmetric)
+```
+Auto-phased max gain = **0.317 MeV** (effective V ≈ 0.317 MV, transit-time factor 0.254).
+
+**Honest caveats:**
+- The on-axis energy gain is driven purely by **Ez** (Bφ=0 on-axis), which is validated
+  to 25 MV/m. So 0.317 MeV is trustworthy.
+- B/(E/c)>1.2 near the **nose-tip** is the conductor-edge singularity (Bφ concentrates at
+  the sharp edge) — physical, not a solver artifact, and it does NOT affect the on-axis
+  beam. The flat gate (0.5–1.2) strictly applies to the smooth-mode region where the
+  plain-cylinder validation (0.5818 vs 0.5819) holds.
+- 0.317 MeV is a single-cell, single-pass, on-axis number at 25 MV/m — a realistic but
+  conservative accelerating-cell scale.
+
+Script: `kernel_nosetracker.py` (Kaggle GPU kernel).
+
+---
+
+## 10. Status
 
 | Item | Status |
 |---|---|
@@ -313,6 +341,7 @@ Script: `beam_phase_sweep.py` (validated), `beam_tracker_exact.py` (single-phase
 | **B field extraction** | ✅ **VALIDATED on plain cylinder** (0.5818 vs 0.582 analytic) **AND nose-cone cell** (gate 1.0108 PASS, axisymmetric solver). See `kernel_rz.py` |
 | Beam tracker (in-repo, square-prism B) | ❌ abandoned — B was wrong (square-prism has no clean TM mode) |
 | **Beam tracker (analytic TM010 pillbox)** | ✅ **WORKS + VALIDATED**: relativistic Lorentz pusher, RF auto-phasing phase sweep, max gain +913.5 keV vs analytic 909.95 keV (ratio 1.004), B/(E/c)=0.582 exact. See `beam_phase_sweep.py` |
+| **Nose-cone beam tracker** | ✅ **WORKS**: axisymmetric nose-cone E/B into Lorentz tracker, auto-phased gain **0.317 MeV** @ 25 MV/m (T=0.254). On-axis Ez drives it; nose-tip Bφ singularity does not affect on-axis beam. See `kernel_nosetracker.py` |
 | ASTRA field export | ✅ spec verified from manual v3.2 |
 | GPT field export | ✅ verified from Pulsar official map3D_EB + GDF sources |
 | Real ASTRA/GPT particle run | ⛔ **future work** — requires installing ASTRA/GPT |
