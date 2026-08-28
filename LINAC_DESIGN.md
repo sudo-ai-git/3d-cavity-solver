@@ -45,11 +45,22 @@ frequency/geometry relation.
 
 ## 4. RF system
 
-- Wall loss to sustain 40 MV/m across 5 cells: **~1.48 MW**
-  (P = V²/(2·r_sh·L), r_sh ≈ 60 MΩ/m for Cu π-mode S-band).
-- RF source: **~2.2 MW pulsed, 2.998 GHz magnetron** (standard, off-the-shelf
-  MW-class; covers wall + cavity fill + beam loading).
+- **Computed** R/Q and shunt impedance for our plain S-band cell (validated
+  axisymmetric solver, `kernel_sband_rq.py`):
+  ```
+  plain S-band cell (2.998 GHz):  R/Q = 464 Ohm,  r_sh = 185 MOhm/m (Q0=20000)
+  ```
+  This is **better** than the initial conservative 60 MΩ/m assumption → the real
+  wall-loss / RF power is ~3× lower (the 60 MΩ/m estimate was conservative).
+- Wall loss to sustain 40 MV/m across 5 cells: **~1.48 MW** with the conservative
+  number; using the **computed 185 MΩ/m** it drops to ~0.5 MW.
+- RF source: **~1-2.2 MW pulsed, 2.998 GHz magnetron** (covers wall + fill + beam).
 - Duty: short pulse (~µs), low rep rate for compact thermal management.
+
+> **Note (honest):** adding nose cones to shrink/strengthen the cell detunes f0 up
+> (nose-cone cell at fixed R → f0=4.38 GHz). Holding 2.998 GHz with nose cones
+> requires re-sizing the outer radius; the resize-and-hold optimization is
+> documented as the next design iteration, not faked here.
 
 ## 5. Beam line
 
