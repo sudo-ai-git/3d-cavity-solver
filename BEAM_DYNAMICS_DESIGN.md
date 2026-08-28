@@ -361,7 +361,39 @@ Script: `kernel_ncells.py` (Kaggle GPU: 2 & 4 cells, scaling law).
 
 ---
 
-## 11. Status
+## 11. Field-flattening optimization — the fix (2026-08-28)
+
+The end-cell droop from §10 is compensated by **shortening the end cells** (the real
+accelerator-design practice). Bisection on the symmetric end-cell length to equalize
+|Ez| across the 4 cells (Kaggle GPU, fine grid):
+
+```
+end cells  5.0cm → 1.31cm        (interior stays 5.0cm)
+flat ratio 2.28  → 1.06
+field      [79,179,179,79] → [215,229,229,215]
+```
+
+**Tracked beam gain through the flattened structure (validated Lorentz tracker):**
+```
+flattened 4-cell auto-phased gain = 1.403 MeV   (multiplier 4.43× single-cell)
+   vs uniform 4-cell 0.785 MeV (2.5×) and 2-cell 1.083 MeV (3.4×)
+```
+
+**Progression (the full "how far" answer):**
+```
+1 cell:  0.317 MeV (1.0×)
+2 cells: 1.083 MeV (3.4×)
+4 cells (uniform):     0.785 MeV (2.5×)   ← end-cell effect
+4 cells (FLATTENED):   1.403 MeV (4.4×)   ← field flattening recovers/exceeds N×
+```
+The end-cell taper raises the drooped end-cell amplitudes to match the interior,
+recovering near-N× scaling. This is the same mechanism real coupled-cell linacs use.
+
+Script: `kernel_flatten.py` (Kaggle GPU: flattening bisection + flattened beam tracker).
+
+---
+
+## 12. Status
 
 | Item | Status |
 |---|---|
@@ -373,6 +405,7 @@ Script: `kernel_ncells.py` (Kaggle GPU: 2 & 4 cells, scaling law).
 | Beam tracker (in-repo, square-prism B) | ❌ abandoned — B was wrong (square-prism has no clean TM mode) |
 | **Beam tracker (analytic TM010 pillbox)** | ✅ **WORKS + VALIDATED**: relativistic Lorentz pusher, RF auto-phasing phase sweep, max gain +913.5 keV vs analytic 909.95 keV (ratio 1.004), B/(E/c)=0.582 exact. See `beam_phase_sweep.py` |
 | **Nose-cone beam tracker** | ✅ **WORKS**: axisymmetric nose-cone E/B into Lorentz tracker, auto-phased gain **0.317 MeV** @ 25 MV/m (T=0.254). On-axis Ez drives it; nose-tip Bφ singularity does not affect on-axis beam. See `kernel_nosetracker.py` |
+| **Multi-cell π-mode + flattening** | ✅ 2-cell 1.083 MeV (3.4×), 4-cell uniform 0.785 MeV (2.5× end-cell effect), **4-cell flattened 1.403 MeV (4.4×)**. See `kernel_ncells.py`, `kernel_flatten.py` |
 | ASTRA field export | ✅ spec verified from manual v3.2 |
 | GPT field export | ✅ verified from Pulsar official map3D_EB + GDF sources |
 | Real ASTRA/GPT particle run | ⛔ **future work** — requires installing ASTRA/GPT |
