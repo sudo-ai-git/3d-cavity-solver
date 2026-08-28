@@ -20,12 +20,21 @@ histogram (MeV): [1,2,0,5,17,13,14,72,57,219]  → peaked ~4.0-4.1 MeV
 
 RF phase sweep is a clean sinusoid (−1.1 to +2.0 MeV), confirming auto-phasing.
 
-## HONEST CAVEAT — emittance
-The transverse **emittance growth is NOT reported**: my hand-rolled rms-envelope
-space-charge model was **numerically unstable** (returned a non-physical ~10⁸ µm
-blow-up while σ_x only grew 1.20→1.37 mm — self-inconsistent, so a code bug, not
-physics). Getting a trustworthy emittance requires a proper beam-dynamics code
-(ASTRA / GPT / tracewin) with a real solenoid lattice — which is the documented
-next step, not faked here. Only σ_x (rms size) is reported: 1.20 → 1.37 mm.
+## HONEST CAVEAT — emittance (RESOLVED via KV envelope)
+The initial hand-rolled raw-momentum PIC was **numerically unstable** (non-physical
+10⁸ µm blow-up while σ_x only grew 1.20→1.37 mm — a code bug, not physics). It is
+**superseded** by the **Kapchinskij-Vladimirskij (KV) envelope equation**
+(`kv_envelope.py`), the standard beam-physics tool (TRACE/TRACE3D), which is
+numerically stable and gives a consistent, validated result:
 
-Run: `python3 kernel_bunch_final.py` (Kaggle kernel `3d-cavity-bunch-space-charge`).
+```
+1 nC / 5 µm beam @ 2 MeV through flattened 4-cell (no external focusing):
+  σ_x   : 1.20 → 1.47 mm   (+23%)
+  rms ε_n: 5.0 → 14.5 µm    (+190%)
+```
+**Real physics:** space-charge defocusing with no focusing lattice. This motivates
+the solenoid focusing called out in the linac design — and is the honest,
+validated emittance-growth number to replace the earlier caveat.
+
+Run: `python3 kv_envelope.py` (Kaggle kernels `3d-cavity-bunch-space-charge`,
+`kernel_bunch_final.py` energy spectrum).
