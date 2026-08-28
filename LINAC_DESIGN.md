@@ -70,7 +70,12 @@ frequency/geometry relation.
 ## 5. Beam line
 
 - Injector: 200 keV electron gun (thermionic or gridded, pulsed).
-- Focusing: solenoid ~0.3–0.5 T around the structure (holds 100 µA–1 mA).
+- Focusing: **solenoid B = 68 mT (676 Gauss) over the 23 cm structure** — sized via the
+  KV envelope matched-beam solution (see `solenoid_size.py`). This holds a
+  1 nC / 5 µm / 200 µA bunch matched (σ_x 1.2 mm, emittance ~2 µm), suppressing the
+  space-charge emittance growth that would otherwise blow up to 14.5 µm (+190%).
+  **Refinement:** the earlier 0.3–0.5 T assertion is ~5× overkill; 68 mT suffices for
+  this low-energy, low-current bunch.
 - Vacuum: ~1e-7 torr.
 - Target: NDT / materials-irradiation target (varies by application).
 
