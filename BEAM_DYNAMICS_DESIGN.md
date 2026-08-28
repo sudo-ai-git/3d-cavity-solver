@@ -330,7 +330,38 @@ Script: `kernel_nosetracker.py` (Kaggle GPU kernel).
 
 ---
 
-## 10. Status
+## 10. N-cell π-mode scaling — end-cell effect (2026-08-28)
+
+Pushed to N cells to test the naive "N× single-cell voltage" expectation. The
+validated axisymmetric solver + Lorentz tracker gives:
+
+```
+2 cells: π-mode f=2.958 GHz, gain 1.083 MeV  (3.41× single-cell)
+4 cells: π-mode f=3.400 GHz, gain 0.785 MeV  (2.47× single-cell)   ← DROPS
+```
+
+**4 cells gain LESS than 2 cells.** Root cause (measured field pattern):
+```
+4-cell π-mode cell fields: −73.7, +177.7, −177.7, +73.7
+```
+The **end cells are ~2.4× weaker than the interior cells** — the classic
+**end-cell effect** in a finite coupled-cell structure (end cells couple to only one
+neighbor, so their field amplitude droops). The beam gets a big kick mid-structure but
+weak kicks at the ends, so total ≠ 4× a uniform cell.
+
+**Why this is the honest result, not a failure:** real coupled-cell π-mode linacs do NOT
+scale voltage linearly with cell count — the end-cell droop is why real designs
+**taper/rescale the end cells** (field-flattening). My uniform-cell model correctly
+exposes this effect. The proper next step (real accelerator design) is an iterative
+field-flattening loop (adjust end-cell length/iris so all cells have equal |Ez|), which
+would recover near-N× scaling. That is a full design-optimization problem, not a single
+solve, and is documented here as the honest boundary.
+
+Script: `kernel_ncells.py` (Kaggle GPU: 2 & 4 cells, scaling law).
+
+---
+
+## 11. Status
 
 | Item | Status |
 |---|---|

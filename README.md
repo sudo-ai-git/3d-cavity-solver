@@ -57,6 +57,21 @@ Stacking cells in π-mode **multiplies** the gained voltage cell-to-cell — the
 expected linac physics, now computed correctly (the earlier square-prism multi-cell
 attempt showed 1.0× because it couldn't couple cells; the axisymmetric iris model does).
 
+### 4. N-cell scaling — the end-cell effect (honest diminishing returns)
+
+```
+2 cells: π-mode gain 1.083 MeV  (3.41× single-cell)
+4 cells: π-mode gain 0.785 MeV  (2.47× single-cell)   ← drops
+```
+
+**4 cells gain LESS than 2 cells** because of the **end-cell effect**: the end cells of a
+finite π-mode structure couple to only one neighbor and their field amplitude droops
+(measured `−73.7, +177.7, −177.7, +73.7` — end cells ~2.4× weaker than interior). This is
+why coupled-cell linacs do **not** scale linearly — real designs taper/rescale end cells
+(field flattening) to recover near-N×. The uniform-cell model correctly exposes this
+effect; field-flattening is the documented honest next step (a design-optimization loop,
+not a single solve).
+
 ---
 
 ## Validation chain (the gate discipline that kept every number honest)
@@ -82,8 +97,10 @@ attempt showed 1.0× because it couldn't couple cells; the axisymmetric iris mod
 - **Cross-section**: the 3D solver uses an area-matched square prism (fine for frequencies,
   wrong for clean TM structure — that's why we moved the B-field work to the axisymmetric
   solver). The axisymmetric results are the trustworthy ones for the beam dynamics.
-- **Many-celled (>2) π-mode** and **real ASTRA/GPT runs** remain future work; the 2-cell
-  result proves the coupling/scaling physics but is not a production linac design.
+- **Many-celled (>2) π-mode** now computed (4-cell: 0.78 MeV, limited by end-cell droop);
+  **field-flattening** (taper end cells) to recover N× and **real ASTRA/GPT runs** remain
+  future work. The N-cell result honestly shows accelerating-cell coupling/saturation, not
+  a production linac design.
 
 ## Files
 
@@ -97,6 +114,7 @@ attempt showed 1.0× because it couldn't couple cells; the axisymmetric iris mod
 | **`beam_phase_sweep.py` / `beam_tracker_exact.py`** | **relativistic Lorentz tracker (analytic pillbox)** | **validated (0.4%)** |
 | **`kernel_nosetracker.py`** | **nose-cone beam tracker (GPU) → 0.317 MeV** | **validated** |
 | **`kernel_multicell_ax.py`** | **2-cell π-mode structure + tracker (GPU) → 1.08 MeV** | **validated** |
+| **`kernel_ncells.py`** | **N-cell π-mode scaling law (GPU): 2→3.4×, 4→2.5× (end-cell effect)** | **validated** |
 | `kernel_multicell.py` | old square-prism multi-cell (no coupling) | kept for audit trail |
 | `BEAM_DYNAMICS_DESIGN.md` | full design doc: formats, workflow, honest diagnosis | current |
 | `hex_render.py`, `cavity_solver.py`, `simulate.py` | 37/73 geometry + 2D work | validated |
