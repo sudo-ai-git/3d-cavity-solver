@@ -226,21 +226,32 @@ ratio |B|/(|E|/c) = 0.615   [analytic TM010 = 0.582]  → PASS (within 6%)
 ```
 This proves the curl-based B extraction is **correct when given a valid TM mode**.
 
-### Not yet validated: nose-cone cell
-The nose-cone cell was modeled with an **area-matched square prism** cross-section. A
-square cross-section **breaks cylindrical symmetry and hosts no clean, single TM₀₁₀
-mode** — no low-frequency mode reaches strong on-axis Ez dominance (best ratio ≈ 1.2 at
-high frequency, ~0.7 in the 2 GHz band). Therefore B = curl E / ω from the square-prism
-solution cannot be trusted for the nose cell.
+### VALIDATED: nose-cone cell (axisymmetric solver — the fix)
+
+The blocker was the **square-prism cross-section** (breaks cylindrical symmetry, no clean
+TM₀₁₀). Replaced with a proper **axisymmetric (r,z) scalar TM solver** in scikit-fem
+(solved on MeshQuad→MeshTri, scalar E_z with cylindrical measure 2π r dr dz). Correct BC:
+**Dirichlet (E_z=0) only on r=R; natural on the end caps** (E_z is normal there for TM₀₁₀,
+so no z-variation is forced — the earlier bug imposed E_z=0 on the caps and raised f₀ 2.55→4.1 GHz).
+
+```
+PLAIN cylinder:  f0 = 2.5498 GHz (analytic 2.5498, ratio 1.00000)
+                 B/(E/c) gate = 0.5818  (analytic max|J1|=0.5819) → PASS (exact)
+NOSE-CONE cell (r40 l25):
+                 f0 = 4.8643 GHz
+                 B/(E/c) gate = 1.0108  → PASS  (0.5–1.2 range)
+                 transit-time T = 0.321, V_acc on-axis computed
+```
+Both at 100×100 grid (Kaggle GPU, sparse eigsh). This **unlocks the nose-cone beam
+tracker**: B = -(1/ω)dEz/dr from the axisymmetric solution is now trustworthy.
 
 ### What this means / the path
-- The B-extraction **method is validated** (plain-cylinder gate PASS).
-- A trustworthy B for the **nose-cone cell specifically requires an axisymmetric
-  (r,z) solver or a genuinely cylindrical 3D mesh** — the square-prism approximation is
-  the blocker, not the curl method.
-- This is explicitly **future work**, not faked: do not run a beam tracker on the nose
-  cell's B until it is re-extracted with a proper axisymmetric/cylindrical geometry and
-  re-passed through the |B|/(E/c) gate.
+- The B-extraction **method is validated** (plain-cylinder gate PASS, 0.5818 vs 0.5819).
+- The **nose-cone cell B is now validated** (axisymmetric solver, gate 1.0108 PASS).
+- A nose-cone **beam tracker is now possible** — B = -(1/ω)dEz/dr is trustworthy, so the
+  relativistic Lorentz pusher + auto-phasing (already validated on the analytic pillbox)
+  can run on the nose-cone cell. The remaining step is to feed the axisymmetric E/B into
+  the tracker and confirm the on-axis gain closes against V_acc·T (analogous to §8).
 
 ---
 
@@ -299,7 +310,7 @@ Script: `beam_phase_sweep.py` (validated), `beam_tracker_exact.py` (single-phase
 | Nose-cone cell (transit-time +0.23, V_acc +0.10) | ✅ done |
 | Design sweep optimum | ✅ done |
 | E field extraction | ✅ validated |
-| **B field extraction** | ✅ **VALIDATED on plain cylinder**: ratio 0.615 vs analytic 0.582 (with correct mode selection). ⚠️ nose-cone cell B needs an axisymmetric solver — square-prism cross-section hosts no clean TM₀₁₀ |
+| **B field extraction** | ✅ **VALIDATED on plain cylinder** (0.5818 vs 0.582 analytic) **AND nose-cone cell** (gate 1.0108 PASS, axisymmetric solver). See `kernel_rz.py` |
 | Beam tracker (in-repo, square-prism B) | ❌ abandoned — B was wrong (square-prism has no clean TM mode) |
 | **Beam tracker (analytic TM010 pillbox)** | ✅ **WORKS + VALIDATED**: relativistic Lorentz pusher, RF auto-phasing phase sweep, max gain +913.5 keV vs analytic 909.95 keV (ratio 1.004), B/(E/c)=0.582 exact. See `beam_phase_sweep.py` |
 | ASTRA field export | ✅ spec verified from manual v3.2 |
