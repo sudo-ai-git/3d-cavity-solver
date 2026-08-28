@@ -57,10 +57,15 @@ frequency/geometry relation.
 - RF source: **~1-2.2 MW pulsed, 2.998 GHz magnetron** (covers wall + fill + beam).
 - Duty: short pulse (~µs), low rep rate for compact thermal management.
 
-> **Note (honest):** adding nose cones to shrink/strengthen the cell detunes f0 up
-> (nose-cone cell at fixed R → f0=4.38 GHz). Holding 2.998 GHz with nose cones
-> requires re-sizing the outer radius; the resize-and-hold optimization is
-> documented as the next design iteration, not faked here.
+> **Note (honest):** adding nose cones and then ENLARGING the outer radius to hold
+> 2.998 GHz does NOT raise V_acc — the nose concentrates field but shrinks the
+> accelerating volume; re-enlarging R spreads the field back out, net V_acc falls
+> (~0.9-1.1 MV vs 1.96 MV plain) and R/Q drops. At CONSTANT operating frequency the
+> plain λ/2 cell is the better accelerating design. Nose cones only pay off when the
+> frequency can shift (the 4.86 GHz comparison) or in re-entrant structures with a
+> different effective-volume trade. This is recorded as the honest synthesis finding:
+> for a fixed-frequency S-band linac, the plain cell (V_acc 1.96 MV, R/Q 464 Ω,
+> r_sh 185 MΩ/m) is the correct choice.
 
 ## 5. Beam line
 
