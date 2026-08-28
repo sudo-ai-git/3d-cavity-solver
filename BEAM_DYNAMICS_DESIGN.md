@@ -208,7 +208,43 @@ reconstruct the time dependence. Do NOT export E and B as two uncorrelated real 
 
 ---
 
-## 7. Status
+## 7. B-field extraction — diagnosis and validated method (2026-08-28)
+
+The original failure (|B|/(E/c) = 7.8) was **misdiagnosed** as a gridding/curl-stencil
+problem. Rigorous testing (scripts `b_diag.py`, `b_diag3.py`, `b_fix_nose2.py`) showed:
+
+### Root cause: wrong mode selection, not the curl
+- The **lowest-eigenvalue** mode of the FEM discretization is NOT always the TM₀₁₀
+  accelerating mode. Computing B = curl E / ω from a non-TM mode (transverse E ≈ Ez,
+  ∇·E ≫ 0) gives a garbage B and a meaningless ratio.
+- **Fix:** select the mode by **on-axis Ez dominance** (the accelerating-mode criterion).
+
+### Validated: plain cylinder (analytic Bessel B)
+With correct mode selection on a plain cylinder, B = curl E / ω gives:
+```
+ratio |B|/(|E|/c) = 0.615   [analytic TM010 = 0.582]  → PASS (within 6%)
+```
+This proves the curl-based B extraction is **correct when given a valid TM mode**.
+
+### Not yet validated: nose-cone cell
+The nose-cone cell was modeled with an **area-matched square prism** cross-section. A
+square cross-section **breaks cylindrical symmetry and hosts no clean, single TM₀₁₀
+mode** — no low-frequency mode reaches strong on-axis Ez dominance (best ratio ≈ 1.2 at
+high frequency, ~0.7 in the 2 GHz band). Therefore B = curl E / ω from the square-prism
+solution cannot be trusted for the nose cell.
+
+### What this means / the path
+- The B-extraction **method is validated** (plain-cylinder gate PASS).
+- A trustworthy B for the **nose-cone cell specifically requires an axisymmetric
+  (r,z) solver or a genuinely cylindrical 3D mesh** — the square-prism approximation is
+  the blocker, not the curl method.
+- This is explicitly **future work**, not faked: do not run a beam tracker on the nose
+  cell's B until it is re-extracted with a proper axisymmetric/cylindrical geometry and
+  re-passed through the |B|/(E/c) gate.
+
+---
+
+## 8. Status
 
 | Item | Status |
 |---|---|
@@ -216,7 +252,7 @@ reconstruct the time dependence. Do NOT export E and B as two uncorrelated real 
 | Nose-cone cell (transit-time +0.23, V_acc +0.10) | ✅ done |
 | Design sweep optimum | ✅ done |
 | E field extraction | ✅ validated |
-| **B field extraction (gate: B/(E/c)≈1–2)** | ⚠️ **failed at 7.8× — must redo on finer grid** |
+| **B field extraction** | ✅ **VALIDATED on plain cylinder**: ratio 0.615 vs analytic 0.582 (with correct mode selection). ⚠️ nose-cone cell B needs an axisymmetric solver — square-prism cross-section hosts no clean TM₀₁₀ |
 | Beam tracker (in-repo) | ❌ abandoned — would have been wrong |
 | ASTRA field export | ✅ spec verified from manual v3.2 |
 | GPT field export | ✅ verified from Pulsar official map3D_EB + GDF sources |
