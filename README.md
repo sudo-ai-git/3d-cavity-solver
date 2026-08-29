@@ -7,7 +7,7 @@ fields → relativistic beam tracker → auto-phased energy gain**, applied to a
 
 This is the honest, engineering companion to the "37 × 73 sacred geometry" hypothesis:
 it computes the *real* physics of a resonant cavity and the accelerator figures of
-merit, separating what is true (39 × 73 is a checkable number) from what is numerology
+merit, separating what is true (37 × 73 is a checkable number) from what is numerology
 (no physics links 37/73 to α, c, or ZPE — see the design doc for the honest scope).
 
 ---
